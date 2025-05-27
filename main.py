@@ -13,7 +13,7 @@ font = pygame.font.SysFont("Arial", 24)
 EXTRACT_FOLDER = "extracted"
 
 
-# ---- Circle with skin support ----
+# Circle with skin support
 class Circle:
     def __init__(self, x, y, appear_time, skin):
         self.x = int(x * WIDTH / 512)
@@ -21,7 +21,7 @@ class Circle:
         self.appear_time = appear_time
         self.hit = False
         self.radius = 64
-        self.skin = skin  # dict with skin images or None
+        self.skin = skin
 
     def draw(self, current_time, skin=None):
         if self.hit or current_time < self.appear_time - 1000:
@@ -73,7 +73,7 @@ class Circle:
         return 0
 
 
-# ---- Slider (simple version, no skin support here) ----
+# Slider (simple version, no skin support here)
 class Slider:
     def __init__(self, x1, y1, x2, y2, appear_time, repeats=1, duration=1000):
         self.x1 = int(x1 * WIDTH / 512)
@@ -146,7 +146,7 @@ class Slider:
         return 0
 
 
-# ---- Parse .osu file for circles and sliders ----
+# Parse .osu file for circles and sliders
 def parse_osu_file(path, skin):
     objects = []
     with open(path, "r", encoding="utf-8", errors="ignore") as f:
@@ -175,7 +175,7 @@ def parse_osu_file(path, skin):
     return objects
 
 
-# ---- Score and accuracy ----
+# Score and accuracy
 def update_accuracy(score_values):
     if not score_values:
         return 100.0
@@ -184,7 +184,7 @@ def update_accuracy(score_values):
     return 100.0 * score / total
 
 
-# ---- Load skin images from folder ----
+# Load skin images from folder
 def load_skin(skin_folder):
     skin = {}
     try:
@@ -198,7 +198,7 @@ def load_skin(skin_folder):
     return skin
 
 
-# ---- Gameplay loop ----
+# Gameplay loop
 def play_game(objects, audio_path):
     pygame.mixer.music.load(audio_path)
     pygame.mixer.music.play()
@@ -237,7 +237,7 @@ def play_game(objects, audio_path):
         clock.tick(60)
 
 
-# ---- Extract .osz files ----
+# Extract .osz files
 def extract_osz(file_path):
     with zipfile.ZipFile(file_path, 'r') as zip_ref:
         folder = os.path.join(EXTRACT_FOLDER, os.path.splitext(os.path.basename(file_path))[0])
@@ -246,7 +246,7 @@ def extract_osz(file_path):
     return folder
 
 
-# ---- Select beatmap folder ----
+# Select beatmap folder
 def lobby_menu():
     screen.fill((15, 15, 15))
     text = font.render("Press number key to select beatmap:", True, (255, 255, 255))
