@@ -3,6 +3,7 @@ import zipfile
 import os
 import math
 
+# Initialize pygame
 pygame.init()
 WIDTH, HEIGHT = 800, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -10,25 +11,27 @@ pygame.display.set_caption("osu! clone")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("Arial", 24)
 
+
 CIRCLE_RADIUS = 64
 FOLLOW_RADIUS = 32
 HIT_WINDOW = 150
-APPROACH_RATE = 700  # faster approach fade in/out
+APPROACH_RATE = 700
 EXTRACT_FOLDER = "extracted"
 SKIN_FOLDER = "skins/default"
 HIT_SOUNDS = {"normal": "hitnormal"}
 
-# Load images from fixed skin folder
+# --- Loads images from skins folder ---
 def load_image(name):
     path = os.path.join(SKIN_FOLDER, name)
     if os.path.exists(path):
         return pygame.image.load(path).convert_alpha()
     else:
-        # fallback: simple red circle
+        #fallback
         surf = pygame.Surface((CIRCLE_RADIUS*2, CIRCLE_RADIUS*2), pygame.SRCALPHA)
         pygame.draw.circle(surf, (255, 0, 0), (CIRCLE_RADIUS, CIRCLE_RADIUS), CIRCLE_RADIUS)
         return surf
 
+# Skin elements used during gameplay
 skin_images = {
     "hitcircle": load_image("hitcircle.png"),
     "overlay": load_image("hitcircleoverlay.png"),
@@ -38,12 +41,14 @@ skin_images = {
     "sliderball": load_image("sliderball.png"),
 }
 
+# Loads hitsound from skin folder
 def load_sound(name):
     path = os.path.join(SKIN_FOLDER, name)
     return pygame.mixer.Sound(path) if os.path.exists(path) else None
 
 hitsound = load_sound(HIT_SOUNDS["normal"])
 
+# --- Circle object class ---
 class Circle:
     def __init__(self, x, y, time_):
         self.x = int(x * WIDTH / 512)
@@ -64,6 +69,7 @@ class Circle:
             self.missed = True
             return
 
+        # Calculate approach scale
         approach_progress = max(0, min(1, 1 - dt / APPROACH_RATE))
         approach_scale = 1 + (1 - approach_progress)
         alpha = int(255 * approach_progress)
@@ -83,6 +89,7 @@ class Circle:
         screen.blit(overlay_img, overlay_img.get_rect(center=(self.x, self.y)))
 
     def check_hit(self, pos, current_time):
+        # Check timing and position
         if self.hit or self.missed:
             return 0
         if abs(current_time - self.time) > HIT_WINDOW:
@@ -94,6 +101,7 @@ class Circle:
             return 300
         return 0
 
+# --- Slider object class ---
 class Slider:
     def __init__(self, x1, y1, curve_points, time_, duration=1000):
         self.x1 = int(x1 * WIDTH / 512)
@@ -119,11 +127,12 @@ class Slider:
 
         self.draw_slider_body()
 
+        # Approach logic
         approach_progress = max(0, min(1, 1 - dt / APPROACH_RATE))
         approach_scale = 1 + (1 - approach_progress)
         alpha = int(255 * approach_progress)
 
-        # Draw approach circle on slider start
+        #Approach circle on slider start
         approach = pygame.transform.scale(
             skin_images["approach"], (int(CIRCLE_RADIUS*2*approach_scale), int(CIRCLE_RADIUS*2*approach_scale))
         )
@@ -162,7 +171,7 @@ class Slider:
         end_circle.set_alpha(alpha)
         screen.blit(end_circle, end_circle.get_rect(center=end_pos))
 
-        # Draw slider ball if clicked and during duration
+        # Draw slider ball if clicked and held
         if self.clicked and self.time <= current_time <= self.time + self.duration:
             t = (current_time - self.time) / self.duration
             # Calculate position along curve (linear interpolation for now)
@@ -171,6 +180,7 @@ class Slider:
             screen.blit(follow, follow.get_rect(center=pos))
 
     def draw_slider_body(self):
+        # Render slider path using trnslucent circles between points
         if len(self.curve_points) >= 1:
             points = [(self.x1, self.y1)] + self.curve_points
             path_thickness = CIRCLE_RADIUS * 2
@@ -191,7 +201,7 @@ class Slider:
             screen.blit(path_surf, (0, 0))
 
     def get_pos_along_curve(self, t):
-        # Simple linear interpolation between points
+        # Interpolates slider ball position based on time
         if len(self.curve_points) == 0:
             return (self.x1, self.y1)
         points = [(self.x1, self.y1)] + self.curve_points
@@ -225,6 +235,7 @@ class Slider:
             return 300
         return 0
 
+# --- Parse .osu file to extract hit objects and audio ---
 def parse_osu_file(path):
     objects = []
     audio_file = None
@@ -258,6 +269,7 @@ def parse_osu_file(path):
                 objects.append(Slider(int(x), int(y), points, int(time_), slider_duration))
     return objects, audio_file
 
+# --- Extract .osz (zip) files ---
 def extract_osz(path):
     folder = os.path.join(EXTRACT_FOLDER, os.path.basename(path).replace(".osz", ""))
     if not os.path.exists(folder):
@@ -265,11 +277,13 @@ def extract_osz(path):
             zip_ref.extractall(folder)
     return folder
 
+# --- Accuracy calculation ---
 def update_accuracy(scores):
     return 100 * sum(scores) / (300 * len(scores)) if scores else 100.0
 
+# --- Lobby screen: beatmap selection ---
 def lobby_menu():
-    OSZ_FOLDER = "osz"  # Change here, folder where your .osz files are stored
+    OSZ_FOLDER = "osz"
     if not os.path.exists(OSZ_FOLDER):
         os.makedirs(OSZ_FOLDER)
     files = [f for f in os.listdir(OSZ_FOLDER) if f.endswith(".osz")]
@@ -284,6 +298,7 @@ def lobby_menu():
         title = font.render("Select Beatmap (.osz) - Use UP/DOWN and Enter", True, (255,255,255))
         screen.blit(title, (20,20))
 
+        # Display all beatmap filenames
         for i, f in enumerate(files):
             color = (255, 255, 255) if i == selected else (180, 180, 180)
             text = font.render(f, True, color)
@@ -302,6 +317,7 @@ def lobby_menu():
                 elif event.key == pygame.K_RETURN:
                     return os.path.join(OSZ_FOLDER, files[selected])
 
+# --- Difficulty selection menu ---
 def difficulty_menu(folder):
     diffs = []
     for f in os.listdir(folder):
@@ -331,6 +347,7 @@ def difficulty_menu(folder):
                 elif event.key == pygame.K_RETURN:
                     return os.path.join(folder, diffs[selected])
 
+# --- Game loop for playing a beatmap ---
 def play_game(objects, audio_path):
     pygame.mixer.music.load(audio_path)
     pygame.mixer.music.play()
@@ -370,6 +387,7 @@ def play_game(objects, audio_path):
         for obj in objects:
             obj.draw(current_time)
 
+        # Display accuracy
         acc = update_accuracy(scores)
         score_text = font.render(f"Score: {score}  Accuracy: {acc:.2f}%", True, (255, 255, 255))
         screen.blit(score_text, (10, HEIGHT - 40))
@@ -377,6 +395,7 @@ def play_game(objects, audio_path):
         pygame.display.flip()
         clock.tick(60)
 
+# --- End screen to show score and allow retry ---
 def end_screen(score, accuracy):
     waiting = True
     while waiting:
@@ -402,6 +421,7 @@ def end_screen(score, accuracy):
                 if event.key == pygame.K_RETURN:
                     waiting = False
 
+# --- Main function controlling flow ---
 def main():
     os.makedirs(EXTRACT_FOLDER, exist_ok=True)
     while True:
